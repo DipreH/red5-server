@@ -410,9 +410,7 @@ public final class PlayEngine implements IFilter, IPushableConsumer, IPipeConnec
                             IVideoStreamCodec videoCodec = stream.getCodecInfo().getVideoCodec();
                             if (videoCodec != null) {
                                 if (withReset) {
-                                    sendReset();
-                                    sendResetStatus(item);
-                                    sendStartStatus(item);
+                                    withResetActions(item);
                                 }
                                 sendNotifications = false;
                                 if (videoCodec.getNumInterframes() > 0 || videoCodec.getKeyframe() != null) {
@@ -487,11 +485,10 @@ public final class PlayEngine implements IFilter, IPushableConsumer, IPipeConnec
         // continue with common play processes (live and vod)
         if (sendNotifications) {
             if (withReset) {
-                sendReset();
-                sendResetStatus(item);
+                withResetActions(item);
             }
-            sendStartStatus(item);
             if (!withReset) {
+                sendStartStatus(item);
                 sendSwitchStatus();
             }
             // if its dynamic playback send the complete status
@@ -512,6 +509,12 @@ public final class PlayEngine implements IFilter, IPushableConsumer, IPipeConnec
                 ensurePullAndPushRunning();
             }
         }
+    }
+
+    private void withResetActions(IPlayItem item) {
+        sendReset();
+        sendResetStatus(item);
+        sendStartStatus(item);
     }
 
     /**
