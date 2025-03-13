@@ -69,6 +69,8 @@ import org.red5.server.stream.message.ResetMessage;
 import org.red5.server.stream.message.StatusMessage;
 import org.slf4j.Logger;
 
+import static org.red5.server.api.stream.StreamState.UNINIT;
+
 /**
  * A play engine for playing a IPlayItem.
  *
@@ -287,19 +289,16 @@ public final class PlayEngine implements IFilter, IPushableConsumer, IPipeConnec
         if (isDebug) {
             log.debug("start - subscriber stream state: {}", (subscriberStream != null ? subscriberStream.getState() : null));
         }
-        switch (subscriberStream.getState()) {
-            case UNINIT:
-                // allow start if uninitialized and change state to stopped
-                subscriberStream.setState(StreamState.STOPPED);
-                IMessageOutput out = consumerService.getConsumerOutput(subscriberStream);
-                if (msgOutReference.compareAndSet(null, out)) {
-                    out.subscribe(this, null);
-                } else if (isDebug) {
-                    log.debug("Message output was already set for stream: {}", subscriberStream);
-                }
-                break;
-            default:
-                throw new IllegalStateException(String.format("Cannot start in current state: %s", subscriberStream.getState()));
+        if (subscriberStream.getState()!=UNINIT) {
+            throw new IllegalStateException(String.format("Cannot start in current state: %s", subscriberStream.getState()));
+        }
+        // allow start if uninitialized and change state to stopped
+        subscriberStream.setState(StreamState.STOPPED);
+        IMessageOutput out = consumerService.getConsumerOutput(subscriberStream);
+        if (msgOutReference.compareAndSet(null, out)) {
+            out.subscribe(this, null);
+        } else if (isDebug) {
+            log.debug("Message output was already set for stream: {}", subscriberStream);
         }
     }
 
