@@ -69,6 +69,7 @@ import org.red5.server.stream.message.ResetMessage;
 import org.red5.server.stream.message.StatusMessage;
 import org.slf4j.Logger;
 
+import static org.red5.server.api.stream.StreamState.STOPPED;
 import static org.red5.server.api.stream.StreamState.UNINIT;
 
 /**
@@ -364,17 +365,13 @@ public final class PlayEngine implements IFilter, IPushableConsumer, IPipeConnec
      */
     public void play(IPlayItem item, boolean withReset) throws StreamNotFoundException, IllegalStateException, IOException {
         IMessageInput in = null;
-        // cannot play if state is not stopped
-        switch (subscriberStream.getState()) {
-            case STOPPED:
-                in = msgInReference.get();
-                if (in != null) {
-                    in.unsubscribe(this);
-                    msgInReference.set(null);
-                }
-                break;
-            default:
-                throw new IllegalStateException("Cannot play from non-stopped state");
+        if (subscriberStream.getState() != STOPPED){
+            throw new IllegalStateException("Cannot play from non-stopped state");
+        }
+        in = msgInReference.get();
+        if (in != null) {
+            in.unsubscribe(this);
+            msgInReference.set(null);
         }
         // Play type determination
         // https://help.adobe.com/en_US/FlashPlatform/reference/actionscript/3/flash/net/NetStream.html#play()
