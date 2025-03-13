@@ -318,6 +318,34 @@ public final class PlayEngine implements IFilter, IPushableConsumer, IPipeConnec
         play(item, true);
     }
 
+
+    public void setPlayDecision(int type, String itemName, IScope thisScope){
+        IProviderService.INPUT_TYPE sourceType = providerService.lookupProviderInput(thisScope, itemName, type);
+        switch (type) {
+            case -2:
+                if (sourceType == IProviderService.INPUT_TYPE.LIVE) {
+                    playDecision = 0;
+                } else if (sourceType == IProviderService.INPUT_TYPE.VOD) {
+                    playDecision = 1;
+                } else if (sourceType == IProviderService.INPUT_TYPE.LIVE_WAIT) {
+                    playDecision = 2;
+                }
+                break;
+            case -1:
+                if (sourceType == IProviderService.INPUT_TYPE.LIVE) {
+                    playDecision = 0;
+                } else if (sourceType == IProviderService.INPUT_TYPE.LIVE_WAIT) {
+                    playDecision = 2;
+                }
+                break;
+            default:
+                if (sourceType == IProviderService.INPUT_TYPE.VOD) {
+                    playDecision = 1;
+                }
+                break;
+        }
+    }
+
     /**
      * Play stream
      *
@@ -363,32 +391,9 @@ public final class PlayEngine implements IFilter, IPushableConsumer, IPipeConnec
         IScope thisScope = subscriberStream.getScope();
         final String itemName = item.getName();
         //check for input and type
-        IProviderService.INPUT_TYPE sourceType = providerService.lookupProviderInput(thisScope, itemName, type);
+        setPlayDecision(type,itemName,thisScope);
         boolean sendNotifications = true;
         // decision: 0 for Live, 1 for File, 2 for Wait, 3 for N/A
-        switch (type) {
-            case -2:
-                if (sourceType == IProviderService.INPUT_TYPE.LIVE) {
-                    playDecision = 0;
-                } else if (sourceType == IProviderService.INPUT_TYPE.VOD) {
-                    playDecision = 1;
-                } else if (sourceType == IProviderService.INPUT_TYPE.LIVE_WAIT) {
-                    playDecision = 2;
-                }
-                break;
-            case -1:
-                if (sourceType == IProviderService.INPUT_TYPE.LIVE) {
-                    playDecision = 0;
-                } else if (sourceType == IProviderService.INPUT_TYPE.LIVE_WAIT) {
-                    playDecision = 2;
-                }
-                break;
-            default:
-                if (sourceType == IProviderService.INPUT_TYPE.VOD) {
-                    playDecision = 1;
-                }
-                break;
-        }
         IMessage msg = null;
         currentItem.set(item);
         long itemLength = item.getLength();
