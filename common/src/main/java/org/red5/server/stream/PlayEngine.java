@@ -271,6 +271,38 @@ public final class PlayEngine implements IFilter, IPushableConsumer, IPipeConnec
 
     }
 
+    public AtomicReference<IMessageInput> getMsgInReference() {
+        return msgInReference;
+    }
+
+    public AtomicReference<IMessageOutput> getMsgOutReference() {
+        return msgOutReference;
+    }
+
+    public ISubscriberStream getSubscriberStream() {
+        return subscriberStream;
+    }
+
+    public IProviderService getProviderService() {
+        return providerService;
+    }
+
+    public boolean isConfigsDone() {
+        return configsDone;
+    }
+
+    public int getBufferedInterframeIdx() {
+        return bufferedInterframeIdx;
+    }
+
+    public IFrameDropper getVideoFrameDropper() {
+        return videoFrameDropper;
+    }
+
+    public void setConfigsDone(boolean configsDone) {
+        this.configsDone = configsDone;
+    }
+
     public void setBufferCheckInterval(int bufferCheckInterval) {
         this.bufferCheckInterval = bufferCheckInterval;
     }
