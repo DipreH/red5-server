@@ -141,10 +141,14 @@ public abstract class RTMPConnection extends BaseConnection implements IStreamCa
     // ~320 streams seems like a sufficient max amount of streams for a single connection
     public static final double MAX_RESERVED_STREAMS = 320;
 
+    public static final int DEFAULT_FIRST_AVAILABLE_CHANNEL = 4;
+
     /**
      * Updater for taskCount field.
      */
     private static final AtomicIntegerFieldUpdater<RTMPConnection> receivedQueueSizeUpdater = AtomicIntegerFieldUpdater.newUpdater(RTMPConnection.class, "receivedQueueSize");
+
+
 
     /**
      * Initial channel capacity
@@ -635,7 +639,7 @@ public abstract class RTMPConnection extends BaseConnection implements IStreamCa
      * @return Next available channel id
      */
     public int getNextAvailableChannelId() {
-        int result = 4;
+        int result = DEFAULT_FIRST_AVAILABLE_CHANNEL;
         while (isChannelUsed(result)) {
             result++;
         }
@@ -878,10 +882,10 @@ public abstract class RTMPConnection extends BaseConnection implements IStreamCa
      * @return ID of stream that channel belongs to
      */
     public Number getStreamIdForChannelId(int channelId) {
-        if (channelId < 4) {
+        if (channelId < DEFAULT_FIRST_AVAILABLE_CHANNEL) {
             return 0;
         }
-        Number streamId = Math.floor(((channelId - 4) / 5.0d) + 1);
+        Number streamId = Math.floor(((channelId - DEFAULT_FIRST_AVAILABLE_CHANNEL) / 5.0d) + 1);
         if (isTrace) {
             log.trace("Stream id: {} requested for channel id: {}", streamId, channelId);
         }
@@ -897,7 +901,7 @@ public abstract class RTMPConnection extends BaseConnection implements IStreamCa
      */
     public IClientStream getStreamByChannelId(int channelId) {
         // channels 2 and 3 are "special" and don't have an IClientStream associated
-        if (channelId < 4) {
+        if (channelId < DEFAULT_FIRST_AVAILABLE_CHANNEL) {
             return null;
         }
         Number streamId = getStreamIdForChannelId(channelId);
