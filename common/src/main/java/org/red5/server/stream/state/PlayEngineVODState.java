@@ -2,9 +2,12 @@ package org.red5.server.stream.state;
 
 import org.red5.server.api.scope.IScope;
 import org.red5.server.api.stream.IPlayItem;
+import org.red5.server.api.stream.StreamState;
+import org.red5.server.messaging.IMessage;
 import org.red5.server.messaging.IMessageInput;
 import org.red5.server.net.rtmp.event.*;
 import org.red5.server.net.rtmp.message.Constants;
+import org.red5.server.stream.StreamNotFoundException;
 import org.red5.server.stream.message.RTMPMessage;
 import org.slf4j.Logger;
 
@@ -16,9 +19,65 @@ public class PlayEngineVODState extends AbstractPlayEngineState{
         this.log = log;
     }
 
-    @Override
-    public void play(IPlayItem item, IMessageInput in, IScope thisScope, boolean withReset, boolean sendNotifications) throws IOException {
+    private final IMessage playVOD(boolean withReset, long itemLength) throws IOException {
+        IMessage msg = null;
+        // change state
+        getPlayEngine().getSubscriberStream().setState(StreamState.PLAYING);
+        if (withReset) {
+            getPlayEngine().releasePendingMessage();
+        }
+        getPlayEngine().sendVODInitCM(getPlayEngine().getCurrentItem().get());
+        // Don't use pullAndPush to detect IOExceptions prior to sending NetStream.Play.Start
+        int start = (int) getPlayEngine().getCurrentItem().get().getStart();
+        if (start > 0) {
+            getPlayEngine().setStreamOffset(getPlayEngine().sendVODSeekCM(start));
+            // We seeked to the nearest keyframe so use real timestamp now
+            if (getPlayEngine().getStreamOffset() == -1) {
+                getPlayEngine().setStreamOffset(start);
+            }
+        }
+        IMessageInput in = getPlayEngine().getMsgInReference().get();
+        msg = in.pullMessage();
+        if (msg instanceof RTMPMessage) {
+            // Only send first video frame
+            IRTMPEvent body = ((RTMPMessage) msg).getBody();
+            if (itemLength == 0) {
+                while (body != null && !(body instanceof VideoData)) {
+                    msg = in.pullMessage();
+                    if (msg != null && msg instanceof RTMPMessage) {
+                        body = ((RTMPMessage) msg).getBody();
+                    } else {
+                        break;
+                    }
+                }
+            }
+            if (body != null) {
+                // Adjust timestamp when playing lists
+                body.setTimestamp(body.getTimestamp() + getPlayEngine().getTimestampOffset());
+            }
+        }
+        return msg;
+    }
 
+    @Override
+    public void play(IPlayItem item, IMessageInput in, IScope thisScope, boolean withReset, boolean sendNotifications) throws IOException, StreamNotFoundException {
+        IMessage msg = null;
+        in = getPlayEngine().getProviderService().getVODProviderInput(thisScope, item.getName());
+        if (getPlayEngine().getMsgInReference().compareAndSet(null, in)) {
+            if (in.subscribe(getPlayEngine(), null)) {
+                // execute the processes to get VOD playback setup
+                msg = playVOD(withReset, item.getLength());
+            } else {
+                log.warn("Input source subscribe failed");
+                throw new IOException(String.format("Subscribe to %s failed", item.getName()));
+            }
+        } else {
+            getPlayEngine().sendStreamNotFoundStatus(item);
+            throw new StreamNotFoundException(item.getName());
+        }
+        if (msg != null) {
+            sendMessage((RTMPMessage) msg);
+        }
     }
 
     @Override
@@ -66,5 +125,6 @@ public class PlayEngineVODState extends AbstractPlayEngineState{
                 return;
             }
         }
+        getPlayEngine().doPushMessage(messageOut);
     }
 }
