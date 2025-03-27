@@ -62,7 +62,7 @@ public class PlayEngineVODState extends AbstractPlayEngineState{
     }
 
     @Override
-    public void play(IPlayItem item, IMessageInput in, IScope thisScope, boolean withReset, boolean sendNotifications) throws IOException, StreamNotFoundException {
+    public boolean play(IPlayItem item, IMessageInput in, IScope thisScope, boolean withReset) throws IOException, StreamNotFoundException {
         IMessage msg = null;
         in = getPlayEngine().getProviderService().getVODProviderInput(thisScope, item.getName());
         if (getPlayEngine().getMsgInReference().compareAndSet(null, in)) {
@@ -80,6 +80,7 @@ public class PlayEngineVODState extends AbstractPlayEngineState{
         if (msg != null) {
             sendMessage((RTMPMessage) msg);
         }
+        return false;
     }
 
     @Override

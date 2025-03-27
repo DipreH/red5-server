@@ -21,7 +21,7 @@ public class PlayEngineWaitState extends AbstractPlayEngineState{
     }
 
     @Override
-    public void play(IPlayItem item, IMessageInput in, IScope thisScope, boolean withReset, boolean sendNotifications) throws IOException, StreamNotFoundException {
+    public boolean play(IPlayItem item, IMessageInput in, IScope thisScope, boolean withReset) throws IOException, StreamNotFoundException {
         // get source input with create
         in = getPlayEngine().getProviderService().getLiveProviderInput(thisScope, item.getName(), true);
         int type = (int) (item.getStart() / 1000);
@@ -55,6 +55,7 @@ public class PlayEngineWaitState extends AbstractPlayEngineState{
         } else if (getPlayEngine().isDebug()) {
             log.debug("Message input already set for {}", item.getName());
         }
+        return true;
     }
 
     @Override

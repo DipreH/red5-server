@@ -68,6 +68,9 @@ import org.red5.server.stream.message.RTMPMessage;
 import org.red5.server.stream.message.ResetMessage;
 import org.red5.server.stream.message.StatusMessage;
 import org.red5.server.stream.state.AbstractPlayEngineState;
+import org.red5.server.stream.state.PlayEngineLiveState;
+import org.red5.server.stream.state.PlayEngineVODState;
+import org.red5.server.stream.state.PlayEngineWaitState;
 import org.slf4j.Logger;
 
 import static org.red5.server.api.stream.StreamState.STOPPED;
@@ -247,6 +250,10 @@ public final class PlayEngine implements IFilter, IPushableConsumer, IPipeConnec
         streamId = subscriberStream.getStreamId();
     }
 
+    public boolean isDebug() {
+        return isDebug;
+    }
+
 
     /**
      * Builder pattern
@@ -289,6 +296,14 @@ public final class PlayEngine implements IFilter, IPushableConsumer, IPipeConnec
         return msgInReference;
     }
 
+    public String getWaitLiveJob() {
+        return waitLiveJob;
+    }
+
+    public void setWaitLiveJob(String waitLiveJob) {
+        this.waitLiveJob = waitLiveJob;
+    }
+
     public AtomicReference<IMessageOutput> getMsgOutReference() {
         return msgOutReference;
     }
@@ -315,6 +330,10 @@ public final class PlayEngine implements IFilter, IPushableConsumer, IPipeConnec
 
     public IFrameDropper getVideoFrameDropper() {
         return videoFrameDropper;
+    }
+
+    public ISchedulingService getSchedulingService() {
+        return schedulingService;
     }
 
     public void setConfigsDone(boolean configsDone) {
@@ -378,30 +397,15 @@ public final class PlayEngine implements IFilter, IPushableConsumer, IPipeConnec
     }
 
 
-    public void setPlayDecision(int type, String itemName, IScope thisScope){
+    public void setPlayState(int type, String itemName, IScope thisScope){
         IProviderService.INPUT_TYPE sourceType = providerService.lookupProviderInput(thisScope, itemName, type);
-        switch (type) {
-            case -2:
-                if (sourceType == IProviderService.INPUT_TYPE.LIVE) {
-                    playDecision = 0;
-                } else if (sourceType == IProviderService.INPUT_TYPE.VOD) {
-                    playDecision = 1;
-                } else if (sourceType == IProviderService.INPUT_TYPE.LIVE_WAIT) {
-                    playDecision = 2;
-                }
-                break;
-            case -1:
-                if (sourceType == IProviderService.INPUT_TYPE.LIVE) {
-                    playDecision = 0;
-                } else if (sourceType == IProviderService.INPUT_TYPE.LIVE_WAIT) {
-                    playDecision = 2;
-                }
-                break;
-            default:
-                if (sourceType == IProviderService.INPUT_TYPE.VOD) {
-                    playDecision = 1;
-                }
-                break;
+
+        if (sourceType == IProviderService.INPUT_TYPE.LIVE && (type == -1 || type == -2)){
+            this.setState(new PlayEngineLiveState(this, log));
+        } else if (sourceType == IProviderService.INPUT_TYPE.VOD && (type == -2 || type >= 0 )){
+            this.setState(new PlayEngineVODState(this,log));
+        } else if (sourceType == IProviderService.INPUT_TYPE.LIVE_WAIT && (type == -2 || type == -1)){
+            this.setState(new PlayEngineWaitState(this,log));
         }
     }
 
@@ -446,8 +450,7 @@ public final class PlayEngine implements IFilter, IPushableConsumer, IPipeConnec
         IScope thisScope = subscriberStream.getScope();
         final String itemName = item.getName();
         //check for input and type
-        setPlayDecision(type,itemName,thisScope);
-        boolean sendNotifications = true;
+        setPlayState(type,itemName,thisScope);
         // decision: 0 for Live, 1 for File, 2 for Wait, 3 for N/A
 
         currentItem.set(item);
@@ -455,91 +458,12 @@ public final class PlayEngine implements IFilter, IPushableConsumer, IPipeConnec
         if (isDebug) {
             log.debug("Play decision is {} (0=Live, 1=File, 2=Wait, 3=N/A) item length: {}", playDecision, itemLength);
         }
-        switch (playDecision) {
-            case 0:
-                // get source input without create
-                in = providerService.getLiveProviderInput(thisScope, itemName, false);
-                if (msgInReference.compareAndSet(null, in)) {
-                    // drop all frames up to the next keyframe
-                    videoFrameDropper.reset(IFrameDropper.SEND_KEYFRAMES_CHECK);
-                    if (in instanceof IBroadcastScope) {
-                        IBroadcastStream stream = (IBroadcastStream) ((IBroadcastScope) in).getClientBroadcastStream();
-                        if (stream != null && stream.getCodecInfo() != null) {
-                            IVideoStreamCodec videoCodec = stream.getCodecInfo().getVideoCodec();
-                            if (videoCodec != null) {
-                                if (withReset) {
-                                    withResetActions(item);
-                                }
-                                sendNotifications = false;
-                                if (videoCodec.getNumInterframes() > 0 || videoCodec.getKeyframe() != null) {
-                                    bufferedInterframeIdx = 0;
-                                    videoFrameDropper.reset(IFrameDropper.SEND_ALL);
-                                }
-                            }
-                        }
-                    }
-                    // subscribe to stream (ClientBroadcastStream.onPipeConnectionEvent)
-                    in.subscribe(this, null);
-                    // execute the processes to get Live playback setup
-                    playLive();
-                } else {
-                    sendStreamNotFoundStatus(item);
-                    throw new StreamNotFoundException(itemName);
-                }
-                break;
-            case 2:
-                // get source input with create
-                in = providerService.getLiveProviderInput(thisScope, itemName, true);
-                if (msgInReference.compareAndSet(null, in)) {
-                    if (type == -1 && itemLength >= 0) {
-                        if (isDebug) {
-                            log.debug("Creating wait job for {}", itemLength);
-                        }
-                        // Wait given timeout for stream to be published
-                        waitLiveJob = schedulingService.addScheduledOnceJob(itemLength, new IScheduledJob() {
-                            public void execute(ISchedulingService service) {
-                                connectToProvider(itemName);
-                                waitLiveJob = null;
-                                subscriberStream.onChange(StreamState.END);
-                            }
-                        });
-                    } else if (type == -2) {
-                        if (isDebug) {
-                            log.debug("Creating wait job");
-                        }
-                        // Wait x seconds for the stream to be published
-                        waitLiveJob = schedulingService.addScheduledOnceJob(15000, new IScheduledJob() {
-                            public void execute(ISchedulingService service) {
-                                connectToProvider(itemName);
-                                waitLiveJob = null;
-                            }
-                        });
-                    } else {
-                        connectToProvider(itemName);
-                    }
-                } else if (isDebug) {
-                    log.debug("Message input already set for {}", itemName);
-                }
-                break;
-            case 1:
-                in = providerService.getVODProviderInput(thisScope, itemName);
-                if (msgInReference.compareAndSet(null, in)) {
-                    if (in.subscribe(this, null)) {
-                        // execute the processes to get VOD playback setup
-                        msg = playVOD(withReset, itemLength);
-                    } else {
-                        log.warn("Input source subscribe failed");
-                        throw new IOException(String.format("Subscribe to %s failed", itemName));
-                    }
-                } else {
-                    sendStreamNotFoundStatus(item);
-                    throw new StreamNotFoundException(itemName);
-                }
-                break;
+        boolean sendNotifications = this.getState().play(item,in,thisScope,withReset);
+        /**
             default:
                 sendStreamNotFoundStatus(item);
                 throw new StreamNotFoundException(itemName);
-        }
+         */
         // continue with common play processes (live and vod)
         if (sendNotifications) {
             if (withReset) {
@@ -709,7 +633,7 @@ public final class PlayEngine implements IFilter, IPushableConsumer, IPipeConnec
      * @param itemName
      *            name of the item to play
      */
-    private final void connectToProvider(String itemName) {
+    public final void connectToProvider(String itemName) {
         log.debug("Attempting connection to {}", itemName);
         IMessageInput in = msgInReference.get();
         if (in == null) {
@@ -1065,67 +989,7 @@ public final class PlayEngine implements IFilter, IPushableConsumer, IPipeConnec
     }
      */
     private void sendMessage(RTMPMessage messageIn) {
-        IRTMPEvent eventIn = messageIn.getBody();
-        IRTMPEvent event;
-        switch (eventIn.getDataType()) {
-            case Constants.TYPE_AGGREGATE:
-                event = new Aggregate(((Aggregate) eventIn).getData());
-                break;
-            case Constants.TYPE_AUDIO_DATA:
-                event = new AudioData(((AudioData) eventIn).getData());
-                break;
-            case Constants.TYPE_VIDEO_DATA:
-                event = new VideoData(((VideoData) eventIn).getData());
-                break;
-            default:
-                event = new Notify(((Notify) eventIn).getData());
-                break;
-        }
-        // get the incoming event time
-        int eventTime = eventIn.getTimestamp();
-        // get the incoming event source type and set on the outgoing event
-        event.setSourceType(eventIn.getSourceType());
-        // instance the outgoing message
-        RTMPMessage messageOut = RTMPMessage.build(event, eventTime);
-        if (isTrace) {
-            log.trace("Source type - in: {} out: {}", eventIn.getSourceType(), messageOut.getBody().getSourceType());
-            long delta = System.currentTimeMillis() - playbackStart;
-            log.trace("sendMessage: streamStartTS {}, length {}, streamOffset {}, timestamp {} last timestamp {} delta {} buffered {}", new Object[] { streamStartTS.get(), currentItem.get().getLength(), streamOffset, eventTime, lastMessageTs, delta, lastMessageTs - delta });
-        }
-        if (playDecision == 1) { // 1 == vod/file
-            if (eventTime > 0 && streamStartTS.compareAndSet(-1, eventTime)) {
-                log.debug("sendMessage: set streamStartTS");
-                messageOut.getBody().setTimestamp(0);
-            }
-            long length = currentItem.get().getLength();
-            if (length >= 0) {
-                int duration = eventTime - streamStartTS.get();
-                if (isTrace) {
-                    log.trace("sendMessage duration={} length={}", duration, length);
-                }
-                if (duration - streamOffset >= length) {
-                    // sent enough data to client
-                    stop();
-                    return;
-                }
-            }
-        } else {
-            // don't reset streamStartTS to 0 for live streams
-            if (eventTime > 0 && streamStartTS.compareAndSet(-1, eventTime)) {
-                log.debug("sendMessage: set streamStartTS");
-            }
-            // relative timestamp adjustment for live streams
-            int startTs = streamStartTS.get();
-            if (startTs > 0) {
-                // subtract the offset time of when the stream started playing for the client
-                eventTime -= startTs;
-                messageOut.getBody().setTimestamp(eventTime);
-                if (isTrace) {
-                    log.trace("sendMessage (updated): streamStartTS={}, length={}, streamOffset={}, timestamp={}", new Object[] { startTs, currentItem.get().getLength(), streamOffset, eventTime });
-                }
-            }
-        }
-        doPushMessage(messageOut);
+        this.getState().sendMessage(messageIn);
     }
 
     /**

@@ -28,7 +28,7 @@ public abstract class AbstractPlayEngineState {
         this.playEngine = playEngine;
     }
 
-    public abstract void play(IPlayItem item, IMessageInput in, IScope thisScope, boolean withReset,boolean sendNotifications) throws IOException, StreamNotFoundException;
+    public abstract boolean play(IPlayItem item, IMessageInput in, IScope thisScope, boolean withReset) throws IOException, StreamNotFoundException;
 
     public abstract void sendMessage(RTMPMessage messageIn);
 }

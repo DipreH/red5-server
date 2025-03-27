@@ -113,7 +113,8 @@ public class PlayEngineLiveState extends AbstractPlayEngineState {
 
 
     @Override
-    public void play(IPlayItem item, IMessageInput in, IScope thisScope, boolean withReset,boolean sendNotifications) throws IOException {
+    public boolean play(IPlayItem item, IMessageInput in, IScope thisScope, boolean withReset) throws IOException {
+        boolean sendNotifications = true;
         in = getPlayEngine().getProviderService().getLiveProviderInput(thisScope, item.getName(), false);
         if (getPlayEngine().getMsgInReference().compareAndSet(null, in)) {
             // drop all frames up to the next keyframe
@@ -138,7 +139,9 @@ public class PlayEngineLiveState extends AbstractPlayEngineState {
             in.subscribe(getPlayEngine(), null);
             // execute the processes to get Live playback setup
             playLive();
+
         }
+        return sendNotifications;
     }
 
     @Override
