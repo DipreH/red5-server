@@ -183,6 +183,7 @@ public class PlayEngineLiveState extends AbstractPlayEngineState {
                 log.trace("sendMessage (updated): streamStartTS={}, length={}, streamOffset={}, timestamp={}", new Object[] { startTs,getPlayEngine().getCurrentItem().get().getLength(), getPlayEngine().getStreamOffset(), eventTime });
             }
         }
+        getPlayEngine().doPushMessage(messageOut);
     }
 }
 

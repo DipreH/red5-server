@@ -281,6 +281,10 @@ public final class PlayEngine implements IFilter, IPushableConsumer, IPipeConnec
         this.bufferedInterframeIdx = i;
     }
 
+    public void setStreamOffset(int streamOffset) {
+        this.streamOffset = streamOffset;
+    }
+
     public AtomicReference<IMessageInput> getMsgInReference() {
         return msgInReference;
     }
@@ -299,6 +303,10 @@ public final class PlayEngine implements IFilter, IPushableConsumer, IPipeConnec
 
     public boolean isConfigsDone() {
         return configsDone;
+    }
+
+    public int getTimestampOffset() {
+        return timestampOffset;
     }
 
     public int getBufferedInterframeIdx() {
@@ -441,7 +449,7 @@ public final class PlayEngine implements IFilter, IPushableConsumer, IPipeConnec
         setPlayDecision(type,itemName,thisScope);
         boolean sendNotifications = true;
         // decision: 0 for Live, 1 for File, 2 for Wait, 3 for N/A
-        IMessage msg = null;
+
         currentItem.set(item);
         long itemLength = item.getLength();
         if (isDebug) {
@@ -545,9 +553,6 @@ public final class PlayEngine implements IFilter, IPushableConsumer, IPipeConnec
             if (item instanceof DynamicPlayItem) {
                 sendTransitionStatus();
             }
-        }
-        if (msg != null) {
-            sendMessage((RTMPMessage) msg);
         }
         subscriberStream.onChange(StreamState.PLAYING, item, !pullMode);
         if (withReset) {
@@ -1022,7 +1027,7 @@ public final class PlayEngine implements IFilter, IPushableConsumer, IPipeConnec
      * @param message
      *            The message to send.
      */
-    private void doPushMessage(AbstractMessage message) {
+    public void doPushMessage(AbstractMessage message) {
         if (isTrace) {
             String msgType = message.getMessageType();
             log.trace("doPushMessage: {}", msgType);
@@ -1057,7 +1062,6 @@ public final class PlayEngine implements IFilter, IPushableConsumer, IPipeConnec
     /*
     private void sendMessage(RTMPMessage messageIn){
         this.getState().sendMessage(messageIn);
-        doPushMessage(messageOut);
     }
      */
     private void sendMessage(RTMPMessage messageIn) {
@@ -1353,7 +1357,7 @@ public final class PlayEngine implements IFilter, IPushableConsumer, IPipeConnec
      * @param item
      *            Playlist item
      */
-    private void sendStreamNotFoundStatus(IPlayItem item) {
+    public void sendStreamNotFoundStatus(IPlayItem item) {
         Status notFound = new Status(StatusCodes.NS_PLAY_STREAMNOTFOUND);
         notFound.setClientid(streamId);
         notFound.setLevel(Status.ERROR);
@@ -1384,7 +1388,7 @@ public final class PlayEngine implements IFilter, IPushableConsumer, IPipeConnec
      * @param item
      *            Playlist item
      */
-    private void sendVODInitCM(IPlayItem item) {
+    public void sendVODInitCM(IPlayItem item) {
         OOBControlMessage oobCtrlMsg = new OOBControlMessage();
         oobCtrlMsg.setTarget(IPassive.KEY);
         oobCtrlMsg.setServiceName("init");
@@ -1403,7 +1407,7 @@ public final class PlayEngine implements IFilter, IPushableConsumer, IPipeConnec
      *            Playlist item
      * @return Out-of-band control message call result or -1 on failure
      */
-    private int sendVODSeekCM(int position) {
+    public int sendVODSeekCM(int position) {
         OOBControlMessage oobCtrlMsg = new OOBControlMessage();
         oobCtrlMsg.setTarget(ISeekableProvider.KEY);
         oobCtrlMsg.setServiceName("seek");
@@ -1737,7 +1741,7 @@ public final class PlayEngine implements IFilter, IPushableConsumer, IPipeConnec
     /**
      * Releases pending message body, nullifies pending message object
      */
-    private void releasePendingMessage() {
+    public void releasePendingMessage() {
         if (pendingMessage != null) {
             IRTMPEvent body = pendingMessage.getBody();
             if (body instanceof IStreamData && ((IStreamData<?>) body).getData() != null) {
