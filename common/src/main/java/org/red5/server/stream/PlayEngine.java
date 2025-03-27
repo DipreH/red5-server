@@ -67,10 +67,7 @@ import org.red5.server.net.rtmp.status.StatusCodes;
 import org.red5.server.stream.message.RTMPMessage;
 import org.red5.server.stream.message.ResetMessage;
 import org.red5.server.stream.message.StatusMessage;
-import org.red5.server.stream.state.AbstractPlayEngineState;
-import org.red5.server.stream.state.PlayEngineLiveState;
-import org.red5.server.stream.state.PlayEngineVODState;
-import org.red5.server.stream.state.PlayEngineWaitState;
+import org.red5.server.stream.state.*;
 import org.slf4j.Logger;
 
 import static org.red5.server.api.stream.StreamState.STOPPED;
@@ -248,6 +245,7 @@ public final class PlayEngine implements IFilter, IPushableConsumer, IPipeConnec
         providerService = builder.providerService;
         // get the stream id
         streamId = subscriberStream.getStreamId();
+        state = new PlayEngineDefaultState(this,log);
     }
 
     public boolean isDebug() {
@@ -406,6 +404,8 @@ public final class PlayEngine implements IFilter, IPushableConsumer, IPipeConnec
             this.setState(new PlayEngineVODState(this,log));
         } else if (sourceType == IProviderService.INPUT_TYPE.LIVE_WAIT && (type == -2 || type == -1)){
             this.setState(new PlayEngineWaitState(this,log));
+        } else {
+            this.setState(new PlayEngineDefaultState(this,log));
         }
     }
 
@@ -494,137 +494,6 @@ public final class PlayEngine implements IFilter, IPushableConsumer, IPipeConnec
         sendReset();
         sendResetStatus(item);
         sendStartStatus(item);
-    }
-
-    /**
-     * Performs the processes needed for live streams. The following items are sent if they exist:
-     * <ul>
-     * <li>Metadata</li>
-     * <li>Decoder configurations (ie. AVC codec)</li>
-     * <li>Most recent keyframe</li>
-     * </ul>
-     *
-     * @throws IOException
-     */
-    private final void playLive() throws IOException {
-        // change state
-        subscriberStream.setState(StreamState.PLAYING);
-        IMessageInput in = msgInReference.get();
-        IMessageOutput out = msgOutReference.get();
-        if (in != null && out != null) {
-            // get the stream so that we can grab any metadata and decoder configs
-            IBroadcastStream stream = (IBroadcastStream) ((IBroadcastScope) in).getClientBroadcastStream();
-            // prevent an NPE when a play list is created and then immediately flushed
-            int ts = 0;
-            if (stream != null) {
-                Notify metaData = stream.getMetaData();
-                //check for metadata to send
-                if (metaData != null) {
-                    ts = metaData.getTimestamp();
-                    log.debug("Metadata is available");
-                    RTMPMessage metaMsg = RTMPMessage.build(metaData, metaData.getTimestamp());
-                    sendMessage(metaMsg);
-                } else {
-                    log.debug("No metadata available");
-                }
-                IStreamCodecInfo codecInfo = stream.getCodecInfo();
-                log.debug("Codec info: {}", codecInfo);
-                if (codecInfo instanceof StreamCodecInfo) {
-                    StreamCodecInfo info = (StreamCodecInfo) codecInfo;
-                    // handle video codec with configuration
-                    IVideoStreamCodec videoCodec = info.getVideoCodec();
-                    log.debug("Video codec: {}", videoCodec);
-                    if (videoCodec != null) {
-                        // check for decoder configuration to send
-                        IoBuffer config = videoCodec.getDecoderConfiguration();
-                        if (config != null) {
-                            log.debug("Decoder configuration is available for {}", videoCodec.getName());
-                            VideoData conf = new VideoData(config, true);
-                            log.debug("Pushing video decoder configuration");
-                            sendMessage(RTMPMessage.build(conf, ts));
-                        }
-                        // check for keyframes to send
-                        FrameData[] keyFrames = videoCodec.getKeyframes();
-                        for (FrameData keyframe : keyFrames) {
-                            log.debug("Keyframe is available");
-                            VideoData video = new VideoData(keyframe.getFrame(), true);
-                            log.debug("Pushing keyframe");
-                            sendMessage(RTMPMessage.build(video, ts));
-                        }
-                    } else {
-                        log.debug("No video decoder configuration available");
-                    }
-                    // handle audio codec with configuration
-                    IAudioStreamCodec audioCodec = info.getAudioCodec();
-                    log.debug("Audio codec: {}", audioCodec);
-                    if (audioCodec != null) {
-                        // check for decoder configuration to send
-                        IoBuffer config = audioCodec.getDecoderConfiguration();
-                        if (config != null) {
-                            log.debug("Decoder configuration is available for {}", audioCodec.getName());
-                            AudioData conf = new AudioData(config.asReadOnlyBuffer());
-                            log.debug("Pushing audio decoder configuration");
-                            sendMessage(RTMPMessage.build(conf, ts));
-                        }
-                    } else {
-                        log.debug("No audio decoder configuration available");
-                    }
-                }
-            }
-        } else {
-            throw new IOException(String.format("A message pipe is null - in: %b out: %b", (msgInReference == null), (msgOutReference == null)));
-        }
-        configsDone = true;
-    }
-
-    /**
-     * Performs the processes needed for VOD / pre-recorded streams.
-     *
-     * @param withReset
-     *            whether or not to perform reset on the stream
-     * @param itemLength
-     *            length of the item to be played
-     * @return message for the consumer
-     * @throws IOException
-     */
-    private final IMessage playVOD(boolean withReset, long itemLength) throws IOException {
-        IMessage msg = null;
-        // change state
-        subscriberStream.setState(StreamState.PLAYING);
-        if (withReset) {
-            releasePendingMessage();
-        }
-        sendVODInitCM(currentItem.get());
-        // Don't use pullAndPush to detect IOExceptions prior to sending NetStream.Play.Start
-        int start = (int) currentItem.get().getStart();
-        if (start > 0) {
-            streamOffset = sendVODSeekCM(start);
-            // We seeked to the nearest keyframe so use real timestamp now
-            if (streamOffset == -1) {
-                streamOffset = start;
-            }
-        }
-        IMessageInput in = msgInReference.get();
-        msg = in.pullMessage();
-        if (msg instanceof RTMPMessage) {
-            // Only send first video frame
-            IRTMPEvent body = ((RTMPMessage) msg).getBody();
-            if (itemLength == 0) {
-                while (body != null && !(body instanceof VideoData)) {
-                    msg = in.pullMessage();
-                    if (msg != null && msg instanceof RTMPMessage) {
-                        body = ((RTMPMessage) msg).getBody();
-                    } else {
-                        break;
-                    }
-                }
-            }
-            if (body != null) {
-                // Adjust timestamp when playing lists
-                body.setTimestamp(body.getTimestamp() + timestampOffset);
-            }
-        }
-        return msg;
     }
 
     /**
@@ -982,11 +851,6 @@ public final class PlayEngine implements IFilter, IPushableConsumer, IPipeConnec
      *
      * @param messageIn
      *            incoming RTMP message
-     */
-    /*
-    private void sendMessage(RTMPMessage messageIn){
-        this.getState().sendMessage(messageIn);
-    }
      */
     private void sendMessage(RTMPMessage messageIn) {
         this.getState().sendMessage(messageIn);
