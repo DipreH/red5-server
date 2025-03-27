@@ -67,6 +67,7 @@ import org.red5.server.net.rtmp.status.StatusCodes;
 import org.red5.server.stream.message.RTMPMessage;
 import org.red5.server.stream.message.ResetMessage;
 import org.red5.server.stream.message.StatusMessage;
+import org.red5.server.stream.state.AbstractPlayEngineState;
 import org.slf4j.Logger;
 
 import static org.red5.server.api.stream.StreamState.STOPPED;
@@ -230,6 +231,10 @@ public final class PlayEngine implements IFilter, IPushableConsumer, IPipeConnec
 
     private boolean configsDone;
 
+
+
+    private AbstractPlayEngineState state;
+
     /**
      * Constructs a new PlayEngine.
      */
@@ -241,6 +246,7 @@ public final class PlayEngine implements IFilter, IPushableConsumer, IPipeConnec
         // get the stream id
         streamId = subscriberStream.getStreamId();
     }
+
 
     /**
      * Builder pattern
@@ -269,6 +275,10 @@ public final class PlayEngine implements IFilter, IPushableConsumer, IPipeConnec
             return new PlayEngine(this);
         }
 
+    }
+
+    public void setBufferedInterframeIdx(int i) {
+        this.bufferedInterframeIdx = i;
     }
 
     public AtomicReference<IMessageInput> getMsgInReference() {
@@ -301,6 +311,14 @@ public final class PlayEngine implements IFilter, IPushableConsumer, IPipeConnec
 
     public void setConfigsDone(boolean configsDone) {
         this.configsDone = configsDone;
+    }
+
+    public AbstractPlayEngineState getState() {
+        return state;
+    }
+
+    public void setState(AbstractPlayEngineState state) {
+        this.state = state;
     }
 
     public void setBufferCheckInterval(int bufferCheckInterval) {
@@ -543,7 +561,7 @@ public final class PlayEngine implements IFilter, IPushableConsumer, IPipeConnec
         }
     }
 
-    private void withResetActions(IPlayItem item) {
+    public void withResetActions(IPlayItem item) {
         sendReset();
         sendResetStatus(item);
         sendStartStatus(item);
@@ -1035,6 +1053,12 @@ public final class PlayEngine implements IFilter, IPushableConsumer, IPipeConnec
      *
      * @param messageIn
      *            incoming RTMP message
+     */
+    /*
+    private void sendMessage(RTMPMessage messageIn){
+        this.getState().sendMessage(messageIn);
+        doPushMessage(messageOut);
+    }
      */
     private void sendMessage(RTMPMessage messageIn) {
         IRTMPEvent eventIn = messageIn.getBody();
@@ -1642,6 +1666,18 @@ public final class PlayEngine implements IFilter, IPushableConsumer, IPipeConnec
 
     public long getPlaybackStart() {
         return playbackStart;
+    }
+
+    public AtomicInteger getStreamStartTS() {
+        return streamStartTS;
+    }
+
+    public AtomicReference<IPlayItem> getCurrentItem() {
+        return currentItem;
+    }
+
+    public int getStreamOffset() {
+        return streamOffset;
     }
 
     public void sendBlankAudio(boolean sendBlankAudio) {
