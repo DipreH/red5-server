@@ -497,38 +497,6 @@ public final class PlayEngine implements IFilter, IPushableConsumer, IPipeConnec
     }
 
     /**
-     * Connects to the data provider.
-     *
-     * @param itemName
-     *            name of the item to play
-     */
-    public final void connectToProvider(String itemName) {
-        log.debug("Attempting connection to {}", itemName);
-        IMessageInput in = msgInReference.get();
-        if (in == null) {
-            in = providerService.getLiveProviderInput(subscriberStream.getScope(), itemName, true);
-            msgInReference.set(in);
-        }
-        if (in != null) {
-            log.debug("Provider: {}", msgInReference.get());
-            if (in.subscribe(this, null)) {
-                log.debug("Subscribed to {} provider", itemName);
-                // execute the processes to get Live playback setup
-                try {
-                    playLive();
-                } catch (IOException e) {
-                    log.warn("Could not play live stream: {}", itemName, e);
-                }
-            } else {
-                log.warn("Subscribe to {} provider failed", itemName);
-            }
-        } else {
-            log.warn("Provider was not found for {}", itemName);
-            StreamService.sendNetStreamStatus(subscriberStream.getConnection(), StatusCodes.NS_PLAY_STREAMNOTFOUND, "Stream was not found", itemName, Status.ERROR, streamId);
-        }
-    }
-
-    /**
      * Pause at position
      *
      * @param position

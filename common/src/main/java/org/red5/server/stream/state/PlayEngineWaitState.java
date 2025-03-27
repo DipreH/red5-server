@@ -8,8 +8,11 @@ import org.red5.server.api.stream.StreamState;
 import org.red5.server.messaging.IMessageInput;
 import org.red5.server.net.rtmp.event.*;
 import org.red5.server.net.rtmp.message.Constants;
+import org.red5.server.net.rtmp.status.Status;
+import org.red5.server.net.rtmp.status.StatusCodes;
 import org.red5.server.stream.PlayEngine;
 import org.red5.server.stream.StreamNotFoundException;
+import org.red5.server.stream.StreamService;
 import org.red5.server.stream.message.RTMPMessage;
 import org.slf4j.Logger;
 
@@ -33,7 +36,7 @@ public class PlayEngineWaitState extends AbstractPlayEngineState{
                 // Wait given timeout for stream to be published
                 getPlayEngine().setWaitLiveJob(getPlayEngine().getSchedulingService().addScheduledOnceJob(item.getLength(), new IScheduledJob() {
                     public void execute(ISchedulingService service) {
-                        getPlayEngine().connectToProvider(item.getName());
+                        connectToProvider(item.getName());
                         getPlayEngine().setWaitLiveJob(null);
                         getPlayEngine().getSubscriberStream().onChange(StreamState.END);
                     }
@@ -45,12 +48,12 @@ public class PlayEngineWaitState extends AbstractPlayEngineState{
                 // Wait x seconds for the stream to be published
                 getPlayEngine().setWaitLiveJob(getPlayEngine().getSchedulingService().addScheduledOnceJob(15000, new IScheduledJob() {
                     public void execute(ISchedulingService service) {
-                        getPlayEngine().connectToProvider(item.getName());
+                        connectToProvider(item.getName());
                         getPlayEngine().setWaitLiveJob(null);
                     }
                 }));
             } else {
-                getPlayEngine().connectToProvider(item.getName());
+                connectToProvider(item.getName());
             }
         } else if (getPlayEngine().isDebug()) {
             log.debug("Message input already set for {}", item.getName());
@@ -102,5 +105,36 @@ public class PlayEngineWaitState extends AbstractPlayEngineState{
             }
         }
         getPlayEngine().doPushMessage(messageOut);
+    }
+
+    /**
+     * Connects to the data provider.
+     *
+     * @param itemName
+     *            name of the item to play
+     */
+    public final void connectToProvider(String itemName) {
+        log.debug("Attempting connection to {}", itemName);
+        IMessageInput in = getPlayEngine().getMsgInReference().get();
+        if (in == null) {
+            in = getPlayEngine().getProviderService().getLiveProviderInput(getPlayEngine().getSubscriberStream().getScope(), itemName, true);
+            getPlayEngine().getMsgInReference().set(in);
+        }
+        if (in != null) {
+            log.debug("Provider: {}", getPlayEngine().getMsgInReference().get());
+            if (in.subscribe(getPlayEngine(), null)) {
+                log.debug("Subscribed to {} provider", itemName);
+                // execute the processes to get Live playback setup
+                try {
+                    playLive();
+                } catch (IOException e) {
+                    log.warn("Could not play live stream: {}", itemName, e);
+                }
+            } else {
+                log.warn("Subscribe to {} provider failed", itemName);
+            }
+        } else {
+            log.warn("Provider was not found for {}", itemName);
+            StreamService.sendNetStreamStatus(getPlayEngine().getSubscriberStream().getConnection(), StatusCodes.NS_PLAY_STREAMNOTFOUND, "Stream was not found", itemName, Status.ERROR, getPlayEngine().getSubscriberStream().getStreamId());        }
     }
 }
