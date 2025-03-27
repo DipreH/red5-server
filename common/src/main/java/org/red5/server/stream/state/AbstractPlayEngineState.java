@@ -4,6 +4,7 @@ import org.red5.server.api.scope.IScope;
 import org.red5.server.api.stream.IPlayItem;
 import org.red5.server.messaging.IMessageInput;
 import org.red5.server.stream.PlayEngine;
+import org.red5.server.stream.StreamNotFoundException;
 import org.red5.server.stream.message.RTMPMessage;
 import org.slf4j.Logger;
 import java.io.IOException;
@@ -13,6 +14,12 @@ public abstract class AbstractPlayEngineState {
     private PlayEngine playEngine;
     protected Logger log;
     protected boolean isTrace;
+
+    public AbstractPlayEngineState(PlayEngine p,Logger log) {
+        this.playEngine = p;
+        this.log = log;
+    }
+
     public PlayEngine getPlayEngine() {
         return playEngine;
     }
@@ -21,7 +28,7 @@ public abstract class AbstractPlayEngineState {
         this.playEngine = playEngine;
     }
 
-    public abstract void play(IPlayItem item, IMessageInput in, IScope thisScope, boolean withReset,boolean sendNotifications) throws IOException;
+    public abstract void play(IPlayItem item, IMessageInput in, IScope thisScope, boolean withReset,boolean sendNotifications) throws IOException, StreamNotFoundException;
 
     public abstract void sendMessage(RTMPMessage messageIn);
 }

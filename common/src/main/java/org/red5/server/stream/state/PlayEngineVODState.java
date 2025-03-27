@@ -7,6 +7,7 @@ import org.red5.server.messaging.IMessage;
 import org.red5.server.messaging.IMessageInput;
 import org.red5.server.net.rtmp.event.*;
 import org.red5.server.net.rtmp.message.Constants;
+import org.red5.server.stream.PlayEngine;
 import org.red5.server.stream.StreamNotFoundException;
 import org.red5.server.stream.message.RTMPMessage;
 import org.slf4j.Logger;
@@ -15,8 +16,9 @@ import java.io.IOException;
 
 public class PlayEngineVODState extends AbstractPlayEngineState{
 
-    public PlayEngineVODState(Logger log) {
-        this.log = log;
+
+    public PlayEngineVODState(PlayEngine p, Logger log) {
+        super(p, log);
     }
 
     private final IMessage playVOD(boolean withReset, long itemLength) throws IOException {

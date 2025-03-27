@@ -15,15 +15,16 @@ import org.red5.server.messaging.IMessageOutput;
 import org.red5.server.net.rtmp.event.*;
 import org.red5.server.net.rtmp.message.Constants;
 import org.red5.server.stream.IFrameDropper;
+import org.red5.server.stream.PlayEngine;
 import org.red5.server.stream.message.RTMPMessage;
 import org.slf4j.Logger;
 import java.io.IOException;
 
 public class PlayEngineLiveState extends AbstractPlayEngineState {
 
-    public PlayEngineLiveState(Logger log) {
-        this.log = log;
-        log.isTraceEnabled();
+
+    public PlayEngineLiveState(PlayEngine p, Logger log) {
+        super(p, log);
     }
 
     /**

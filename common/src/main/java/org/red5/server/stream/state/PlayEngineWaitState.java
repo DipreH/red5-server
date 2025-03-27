@@ -8,12 +8,18 @@ import org.red5.server.api.stream.StreamState;
 import org.red5.server.messaging.IMessageInput;
 import org.red5.server.net.rtmp.event.*;
 import org.red5.server.net.rtmp.message.Constants;
+import org.red5.server.stream.PlayEngine;
 import org.red5.server.stream.StreamNotFoundException;
 import org.red5.server.stream.message.RTMPMessage;
+import org.slf4j.Logger;
 
 import java.io.IOException;
 
 public class PlayEngineWaitState extends AbstractPlayEngineState{
+    public PlayEngineWaitState(PlayEngine p, Logger log) {
+        super(p, log);
+    }
+
     @Override
     public void play(IPlayItem item, IMessageInput in, IScope thisScope, boolean withReset, boolean sendNotifications) throws IOException, StreamNotFoundException {
         // get source input with create
