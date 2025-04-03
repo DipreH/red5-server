@@ -39,10 +39,10 @@ public class OutboundHandshake extends RTMPHandshake {
     private int digestPosServer;
 
     // client initial request C1
-    private byte[] c1 = null;
+    private byte[] clientRequest1 = null;
 
     // server initial response S1
-    private byte[] s1 = null;
+    private byte[] serverResponse = null;
 
     // whether or not verification is mandatory
     private boolean forceVerification;
@@ -126,7 +126,7 @@ public class OutboundHandshake extends RTMPHandshake {
             log.trace("Time and version handshake bytes: {}", Hex.encodeHexString(Arrays.copyOf(handshakeBytes, 8)));
         }
         // get the handshake digest
-        c1 = new byte[Constants.HANDSHAKE_SIZE];
+        clientRequest1 = new byte[Constants.HANDSHAKE_SIZE];
         if (fp9Handshake) {
             // handle encryption setup
             if (useEncryption()) {
@@ -155,18 +155,18 @@ public class OutboundHandshake extends RTMPHandshake {
             }
             digestPosClient = getDigestOffset(algorithm, handshakeBytes, 0);
             log.debug("Client digest position offset: {} algorithm: {}", digestPosClient, algorithm);
-            System.arraycopy(handshakeBytes, 0, c1, 0, Constants.HANDSHAKE_SIZE);
-            calculateDigest(digestPosClient, handshakeBytes, 0, GENUINE_FP_KEY, 30, c1, digestPosClient);
+            System.arraycopy(handshakeBytes, 0, clientRequest1, 0, Constants.HANDSHAKE_SIZE);
+            calculateDigest(digestPosClient, handshakeBytes, 0, GENUINE_FP_KEY, 30, clientRequest1, digestPosClient);
             // local storage of outgoing digest
-            System.arraycopy(c1, digestPosClient, outgoingDigest, 0, DIGEST_LENGTH);
+            System.arraycopy(clientRequest1, digestPosClient, outgoingDigest, 0, DIGEST_LENGTH);
             log.debug("Client digest: {}", Hex.encodeHexString(outgoingDigest));
-            log.debug("Digest is valid: {}", verifyDigest(digestPosClient, c1, RTMPHandshake.GENUINE_FP_KEY, 30));
+            log.debug("Digest is valid: {}", verifyDigest(digestPosClient, clientRequest1, RTMPHandshake.GENUINE_FP_KEY, 30));
         }
         if (log.isTraceEnabled()) {
-            log.trace("C1: {}", Hex.encodeHexString(c1));
+            log.trace("C1: {}", Hex.encodeHexString(clientRequest1));
         }
         // put the generated data into our request
-        request.put(c1);
+        request.put(clientRequest1);
         request.flip();
         // clear original base bytes
         handshakeBytes = null;
@@ -186,16 +186,16 @@ public class OutboundHandshake extends RTMPHandshake {
         log.debug("decodeServerResponse1");
         IoBuffer response = null;
         // the handshake type byte is not included
-        s1 = new byte[Constants.HANDSHAKE_SIZE];
-        in.get(s1);
+        serverResponse = new byte[Constants.HANDSHAKE_SIZE];
+        in.get(serverResponse);
         //if (log.isTraceEnabled()) {
         //    log.trace("S1: {}", Hex.encodeHexString(serverSig));
         //}
         if (log.isDebugEnabled()) {
-            log.debug("Server version {}", Hex.encodeHexString(Arrays.copyOfRange(s1, 4, 8)));
+            log.debug("Server version {}", Hex.encodeHexString(Arrays.copyOfRange(serverResponse, 4, 8)));
         }
         // skip key / digest stuff if we're not doing any encryption or server says it doesnt support it
-        if (fp9Handshake && handshakeType == RTMPConnection.RTMP_NON_ENCRYPTED && s1[4] == 0) {
+        if (fp9Handshake && handshakeType == RTMPConnection.RTMP_NON_ENCRYPTED && serverResponse[4] == 0) {
             log.debug("Switching to pre-fp9 handshake");
             fp9Handshake = false;
         }
@@ -211,19 +211,19 @@ public class OutboundHandshake extends RTMPHandshake {
                 return null;
             }
             // digest verification passed, store the digest locally
-            System.arraycopy(s1, digestPosServer, incomingDigest, 0, DIGEST_LENGTH);
+            System.arraycopy(serverResponse, digestPosServer, incomingDigest, 0, DIGEST_LENGTH);
             log.debug("Server digest: {}", Hex.encodeHexString(incomingDigest));
             // generate the SWF verification token
             if (swfSize > 0) {
-                calculateSwfVerification(s1, swfHash, swfSize);
+                calculateSwfVerification(serverResponse, swfHash, swfSize);
             }
             if (useEncryption()) {
                 // get the DH offset in the handshake bytes
-                int serverDHOffset = getDHOffset(algorithm, s1, 0);
+                int serverDHOffset = getDHOffset(algorithm, serverResponse, 0);
                 log.trace("Incoming DH offset: {}", serverDHOffset);
                 // get the servers public key
                 incomingPublicKey = new byte[KEY_LENGTH];
-                System.arraycopy(s1, serverDHOffset, incomingPublicKey, 0, KEY_LENGTH);
+                System.arraycopy(serverResponse, serverDHOffset, incomingPublicKey, 0, KEY_LENGTH);
                 log.debug("Server public key: {}", Hex.encodeHexString(incomingPublicKey));
                 // create the RC4 ciphers
                 initRC4Encryption(getSharedSecret(incomingPublicKey, keyAgreement));
@@ -250,7 +250,7 @@ public class OutboundHandshake extends RTMPHandshake {
             // calculate response now
             byte[] signatureResp = new byte[DIGEST_LENGTH];
             byte[] digestResp = new byte[DIGEST_LENGTH];
-            calculateHMAC_SHA256(s1, digestPosServer, DIGEST_LENGTH, GENUINE_FP_KEY, GENUINE_FP_KEY.length, digestResp, 0);
+            calculateHMAC_SHA256(serverResponse, digestPosServer, DIGEST_LENGTH, GENUINE_FP_KEY, GENUINE_FP_KEY.length, digestResp, 0);
             calculateHMAC_SHA256(c2, 0, Constants.HANDSHAKE_SIZE - DIGEST_LENGTH, digestResp, DIGEST_LENGTH, signatureResp, 0);
             log.debug("Calculated digest key from secure key and server digest: {}", Hex.encodeHexString(digestResp));
             // FP10 stuff
@@ -275,7 +275,7 @@ public class OutboundHandshake extends RTMPHandshake {
         } else {
             // send the server handshake back as a response
             response = IoBuffer.allocate(Constants.HANDSHAKE_SIZE);
-            response.put(s1, 0, Constants.HANDSHAKE_SIZE);
+            response.put(serverResponse, 0, Constants.HANDSHAKE_SIZE);
             response.flip();
         }
         // send the response
@@ -308,7 +308,7 @@ public class OutboundHandshake extends RTMPHandshake {
         log.debug("decodeServerResponse2");
         // the handshake type byte is not included in s2
         if (log.isTraceEnabled()) {
-            log.trace("S2: {}\nC1: {}", Hex.encodeHexString(s2), Hex.encodeHexString(c1));
+            log.trace("S2: {}\nC1: {}", Hex.encodeHexString(s2), Hex.encodeHexString(clientRequest1));
         }
         if (fp9Handshake) {
             if (s2[4] == 0 && s2[5] == 0 && s2[6] == 0 && s2[7] == 0) {
@@ -317,7 +317,7 @@ public class OutboundHandshake extends RTMPHandshake {
             // validate server response part 2, not really required for client
             byte[] signature = new byte[DIGEST_LENGTH];
             byte[] digest = new byte[DIGEST_LENGTH];
-            calculateHMAC_SHA256(c1, digestPosClient, DIGEST_LENGTH, GENUINE_FMS_KEY, GENUINE_FMS_KEY.length, digest, 0);
+            calculateHMAC_SHA256(clientRequest1, digestPosClient, DIGEST_LENGTH, GENUINE_FMS_KEY, GENUINE_FMS_KEY.length, digest, 0);
             calculateHMAC_SHA256(s2, 0, Constants.HANDSHAKE_SIZE - DIGEST_LENGTH, digest, DIGEST_LENGTH, signature, 0);
             log.debug("Digest key: {}", Hex.encodeHexString(digest));
             // FP10 stuff
@@ -343,7 +343,7 @@ public class OutboundHandshake extends RTMPHandshake {
                 log.debug("Compatible flash server");
             }
         } else {
-            if (!Arrays.equals(s2, c1)) {
+            if (!Arrays.equals(s2, clientRequest1)) {
                 log.info("Client signature doesn't match!");
             }
         }
@@ -359,15 +359,15 @@ public class OutboundHandshake extends RTMPHandshake {
         boolean result = false;
         //log.trace("BigEndian bytes: {}", Hex.encodeHexString(s1));
         log.trace("Trying algorithm: {}", algorithm);
-        digestPosServer = getDigestOffset(algorithm, s1, 0);
+        digestPosServer = getDigestOffset(algorithm, serverResponse, 0);
         log.debug("Server digest position offset: {}", digestPosServer);
-        if (!(result = verifyDigest(digestPosServer, s1, GENUINE_FMS_KEY, 36))) {
+        if (!(result = verifyDigest(digestPosServer, serverResponse, GENUINE_FMS_KEY, 36))) {
             // try a different position
             algorithm ^= 1;
             log.trace("Trying algorithm: {}", algorithm);
-            digestPosServer = getDigestOffset(algorithm, s1, 0);
+            digestPosServer = getDigestOffset(algorithm, serverResponse, 0);
             log.debug("Server digest position offset: {}", digestPosServer);
-            if (!(result = verifyDigest(digestPosServer, s1, GENUINE_FMS_KEY, 36))) {
+            if (!(result = verifyDigest(digestPosServer, serverResponse, GENUINE_FMS_KEY, 36))) {
                 log.warn("Server digest verification failed");
                 // if we dont mind that verification routines failed
                 if (!forceVerification) {
@@ -456,7 +456,7 @@ public class OutboundHandshake extends RTMPHandshake {
     }
 
     public byte[] getHandshakeBytes() {
-        return c1;
+        return clientRequest1;
     }
 
     public void setForceVerification(boolean forceVerification) {
