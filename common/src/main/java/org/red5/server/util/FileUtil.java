@@ -78,22 +78,6 @@ public class FileUtil {
         copyFile(new File(source), new File(dest));
     }
 
-    public static void moveFile(String source, String dest) throws IOException {
-        copyFile(source, dest);
-        File src = new File(source);
-        if (src.exists() && src.canRead()) {
-            if (src.delete()) {
-                log.debug("Source file was deleted");
-            } else {
-                log.debug("Source file was not deleted, the file will be deleted on exit");
-                src.deleteOnExit();
-            }
-        } else {
-            log.warn("Source file could not be accessed for removal");
-        }
-        src = null;
-    }
-
     /**
      * Deletes a directory and its contents. This will fail if there are any file locks or if the directory cannot be emptied.
      *
