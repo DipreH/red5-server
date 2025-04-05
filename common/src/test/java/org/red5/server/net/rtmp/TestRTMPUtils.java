@@ -2,13 +2,19 @@ package org.red5.server.net.rtmp;
 
 import static org.junit.Assert.*;
 
+import org.apache.mina.core.buffer.IoBuffer;
 import org.junit.Test;
 
 public class TestRTMPUtils {
 
     @Test
     public void testWriteMediumInt() {
-        fail("Not yet implemented");
+        IoBuffer out = IoBuffer.allocate(3);
+        int value =  1 + 256 + 65536;
+        RTMPUtils.writeMediumInt(out,value);
+        for (int i = 0; i<3;i++){
+            assertEquals(1, out.get(i));
+        }
     }
 
     @Test
