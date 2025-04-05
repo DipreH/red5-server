@@ -7,6 +7,7 @@ import org.red5.server.messaging.IMessage;
 import org.red5.server.messaging.IMessageInput;
 import org.red5.server.net.rtmp.event.*;
 import org.red5.server.net.rtmp.message.Constants;
+import org.red5.server.stream.OOBControlMessageNotIntegerException;
 import org.red5.server.stream.PlayEngine;
 import org.red5.server.stream.StreamNotFoundException;
 import org.red5.server.stream.message.RTMPMessage;
@@ -32,11 +33,13 @@ public class PlayEngineVODState extends AbstractPlayEngineState{
         // Don't use pullAndPush to detect IOExceptions prior to sending NetStream.Play.Start
         int start = (int) getPlayEngine().getCurrentItem().get().getStart();
         if (start > 0) {
-            getPlayEngine().setStreamOffset(getPlayEngine().sendVODSeekCM(start));
-            // We seeked to the nearest keyframe so use real timestamp now
-            if (getPlayEngine().getStreamOffset() == -1) {
-                getPlayEngine().setStreamOffset(start);
+            int res;
+            try {
+                res = getPlayEngine().sendVODSeekCM(start);
+            } catch (OOBControlMessageNotIntegerException err){
+                res = start;
             }
+            getPlayEngine().setStreamOffset(res);
         }
         IMessageInput in = getPlayEngine().getMsgInReference().get();
         msg = in.pullMessage();

@@ -536,7 +536,9 @@ public final class PlayEngine implements IFilter, IPushableConsumer, IPipeConnec
                 sendReset();
                 sendResumeStatus(currentItem.get());
                 if (pullMode) {
-                    sendVODSeekCM(position);
+                    try {
+                        sendVODSeekCM(position);
+                    } catch (Exception ignore) {}
                     subscriberStream.onChange(StreamState.RESUMED, currentItem.get(), position);
                     playbackStart = System.currentTimeMillis() - position;
                     long length = currentItem.get().getLength();
@@ -1103,7 +1105,7 @@ public final class PlayEngine implements IFilter, IPushableConsumer, IPipeConnec
      *            Playlist item
      * @return Out-of-band control message call result or -1 on failure
      */
-    public int sendVODSeekCM(int position) {
+    public int sendVODSeekCM(int position) throws OOBControlMessageNotIntegerException{
         OOBControlMessage oobCtrlMsg = new OOBControlMessage();
         oobCtrlMsg.setTarget(ISeekableProvider.KEY);
         oobCtrlMsg.setServiceName("seek");
@@ -1114,7 +1116,7 @@ public final class PlayEngine implements IFilter, IPushableConsumer, IPipeConnec
         if (oobCtrlMsg.getResult() instanceof Integer) {
             return (Integer) oobCtrlMsg.getResult();
         } else {
-            return -1;
+            throw new OOBControlMessageNotIntegerException("error");
         }
     }
 
@@ -1538,9 +1540,10 @@ public final class PlayEngine implements IFilter, IPushableConsumer, IPipeConnec
             sendReset();
             sendSeekStatus(currentItem.get(), position);
             sendStartStatus(currentItem.get());
-            int seekPos = sendVODSeekCM(position);
-            // we seeked to the nearest keyframe so use real timestamp now
-            if (seekPos == -1) {
+            int seekPos;
+            try {
+                seekPos = sendVODSeekCM(position);
+            } catch (OOBControlMessageNotIntegerException err){
                 seekPos = position;
             }
             //what should our start be?
