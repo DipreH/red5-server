@@ -241,62 +241,6 @@ public class Client extends AttributeStore implements IClient {
         return connections.contains(conn);
     }
 
-    /**
-     * Associate connection with client
-     *
-     * @param conn
-     *            Connection object
-     */
-    protected void register(IConnection conn) {
-        if (log.isDebugEnabled()) {
-            if (conn == null) {
-                log.debug("Register null connection, client id: {}", id);
-            } else {
-                log.debug("Register connection ({}:{}) client id: {}", conn.getRemoteAddress(), conn.getRemotePort(), id);
-            }
-        }
-        if (conn != null) {
-            IScope scope = conn.getScope();
-            if (scope != null) {
-                log.debug("Registering for scope: {}", scope);
-                connections.add(conn);
-            } else {
-                log.warn("Clients scope is null. Id: {}", id);
-            }
-        } else {
-            log.warn("Clients connection is null. Id: {}", id);
-        }
-    }
-
-    /**
-     * Removes client-connection association for given connection
-     *
-     * @param conn
-     *            Connection object
-     */
-    protected void unregister(IConnection conn) {
-        unregister(conn, true);
-    }
-
-    /**
-     * Removes client-connection association for given connection
-     *
-     * @param conn
-     *            Connection object
-     * @param deleteIfNoConns
-     *            Whether to delete this client if it no longer has any connections
-     */
-    protected void unregister(IConnection conn, boolean deleteIfNoConns) {
-        log.debug("Unregister connection ({}:{}) client id: {}", conn.getRemoteAddress(), conn.getRemotePort(), id);
-        // remove connection from connected scopes list
-        connections.remove(conn);
-        // If client is not connected to any scope any longer then remove
-        if (deleteIfNoConns && connections.isEmpty()) {
-            // TODO DW dangerous the way this is called from BaseConnection.initialize(). Could we unexpectedly pop a Client out of the registry?
-            removeInstance();
-        }
-    }
-
     /** {@inheritDoc} */
     public boolean isBandwidthChecked() {
         return bandwidthChecked;
@@ -369,20 +313,6 @@ public class Client extends AttributeStore implements IClient {
         return instance;
     }
 
-    /**
-     * Removes this instance from the client registry.
-     */
-    private void removeInstance() {
-        // unregister client
-        ClientRegistry ref = registry.get();
-        if (ref != null) {
-            ref.removeClient(this);
-        } else {
-            log.warn("Client registry reference was not accessable, removal failed");
-            // TODO: attempt to lookup the registry via the global.clientRegistry
-        }
-    }
-
     @Override
     public int hashCode() {
         if (id == null) {
@@ -413,6 +343,76 @@ public class Client extends AttributeStore implements IClient {
     @Override
     public String toString() {
         return "Client: " + id;
+    }
+
+    /**
+     * Associate connection with client
+     *
+     * @param conn
+     *            Connection object
+     */
+    protected void register(IConnection conn) {
+        if (log.isDebugEnabled()) {
+            if (conn == null) {
+                log.debug("Register null connection, client id: {}", id);
+            } else {
+                log.debug("Register connection ({}:{}) client id: {}", conn.getRemoteAddress(), conn.getRemotePort(), id);
+            }
+        }
+        if (conn != null) {
+            IScope scope = conn.getScope();
+            if (scope != null) {
+                log.debug("Registering for scope: {}", scope);
+                connections.add(conn);
+            } else {
+                log.warn("Clients scope is null. Id: {}", id);
+            }
+        } else {
+            log.warn("Clients connection is null. Id: {}", id);
+        }
+    }
+
+    /**
+     * Removes client-connection association for given connection
+     *
+     * @param conn
+     *            Connection object
+     */
+    protected void unregister(IConnection conn) {
+        unregister(conn, true);
+    }
+
+    /**
+     * Removes client-connection association for given connection
+     *
+     * @param conn
+     *            Connection object
+     * @param deleteIfNoConns
+     *            Whether to delete this client if it no longer has any connections
+     */
+    protected void unregister(IConnection conn, boolean deleteIfNoConns) {
+        log.debug("Unregister connection ({}:{}) client id: {}", conn.getRemoteAddress(), conn.getRemotePort(), id);
+        // remove connection from connected scopes list
+        connections.remove(conn);
+        // If client is not connected to any scope any longer then remove
+        if (deleteIfNoConns && connections.isEmpty()) {
+            // TODO DW dangerous the way this is called from BaseConnection.initialize(). Could we unexpectedly pop a Client out of the registry?
+            removeInstance();
+        }
+    }
+
+    /**
+     * Removes this instance from the client registry.
+     */
+    private void removeInstance() {
+        // unregister client
+        ClientRegistry ref = registry.get();
+        if (ref != null) {
+            ref.removeClient(this);
+        } else {
+            log.warn("Client registry reference was not accessable, removal failed");
+            // TODO: attempt to lookup the registry via the global.clientRegistry
+        }
     }
 
 }
