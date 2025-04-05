@@ -247,21 +247,16 @@ public class RTMPHandler extends BaseRTMPHandler {
                 log.debug("Method does not have return value, do not reply");
                 return;
             }
-            boolean sendResult = true;
-            if (call instanceof IPendingServiceCall) {
-                IPendingServiceCall psc = (IPendingServiceCall) call;
-                Object result = psc.getResult();
-                if (result instanceof DeferredResult) {
+            IPendingServiceCall psc = (IPendingServiceCall) call;
+            Object result = psc.getResult();
+            if ((call instanceof IPendingServiceCall)&&(result instanceof DeferredResult)) {
                     // Remember the deferred result to be sent later
                     DeferredResult dr = (DeferredResult) result;
                     dr.setServiceCall(psc);
                     dr.setChannel(channel);
                     dr.setTransactionId(transId);
                     conn.registerDeferredResult(dr);
-                    sendResult = false;
-                }
-            }
-            if (sendResult) {
+            } else {
                 // The client expects a result for the method call
                 Invoke reply = new Invoke();
                 reply.setCall(call);
@@ -373,25 +368,9 @@ public class RTMPHandler extends BaseRTMPHandler {
                         }
                     }
                 } catch (ScopeNotFoundException err) {
-                    log.warn("Scope not found", err);
-                    call.setStatus(Call.STATUS_SERVICE_NOT_FOUND);
-                    if (call instanceof IPendingServiceCall) {
-                        StatusObject status = getStatus(NC_CONNECT_REJECTED);
-                        status.setDescription(String.format("No scope '%s' on this server.", path));
-                        ((IPendingServiceCall) call).setResult(status);
-                    }
-                    log.info("Scope {} not found on {}", path, host);
-                    disconnectOnReturn = true;
+                    disconnectOnReturn = disconnectedErrorConstructor("Scope not found",Call.STATUS_SERVICE_NOT_FOUND,NC_CONNECT_REJECTED,"No scope '%s' on this server.","Scope {} not found on {}",err,call,path,host);
                 } catch (ScopeShuttingDownException err) {
-                    log.warn("Scope shutting down", err);
-                    call.setStatus(Call.STATUS_APP_SHUTTING_DOWN);
-                    if (call instanceof IPendingServiceCall) {
-                        StatusObject status = getStatus(NC_CONNECT_APPSHUTDOWN);
-                        status.setDescription(String.format("Application at '%s' is currently shutting down.", path));
-                        ((IPendingServiceCall) call).setResult(status);
-                    }
-                    log.info("Application at {} currently shutting down on {}", path, host);
-                    disconnectOnReturn = true;
+                    disconnectOnReturn = disconnectedErrorConstructor("Scope shutting down",Call.STATUS_APP_SHUTTING_DOWN,NC_CONNECT_APPSHUTDOWN,"Application at '%s' is currently shutting down.","Application at {} currently shutting down on {}",err,call,path,host);
                 }
             } else {
                 log.warn("Scope {} not found", path);
@@ -437,6 +416,18 @@ public class RTMPHandler extends BaseRTMPHandler {
         return disconnectOnReturn;
     }
 
+    private boolean disconnectedErrorConstructor(String warn, byte callStatus, String statusCode, String description, String info, Exception err,IServiceCall call, String path,String host){
+        log.warn(warn, err);
+        call.setStatus(callStatus);
+        if (call instanceof IPendingServiceCall) {
+            StatusObject status = getStatus(statusCode);
+            status.setDescription(String.format(description, path));
+            ((IPendingServiceCall) call).setResult(status);
+        }
+        log.info(info, path, host);
+        return true;
+    }
+    
     private void onCommandConnected(RTMPConnection conn, Channel channel, Header source, IServiceCall call, String action) {
         // If this is not a service call then handle connection...
         if (call.getServiceName() == null) {
@@ -498,7 +489,6 @@ public class RTMPHandler extends BaseRTMPHandler {
             invokeCall(conn, call);
         }
     }
-
     public StatusObject getStatus(String code) {
         return statusObjectService.getStatusObject(code);
     }
