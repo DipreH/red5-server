@@ -18,7 +18,7 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.red5.server.BaseConnection;
+import org.red5.server.clients.BaseConnection;
 import org.red5.server.net.IConnectionManager;
 import org.red5.server.net.rtmpt.RTMPTConnection;
 import org.slf4j.Logger;

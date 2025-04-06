@@ -16,7 +16,7 @@ import java.util.stream.Stream;
 
 import org.apache.commons.lang3.StringUtils;
 import org.red5.io.utils.ObjectMap;
-import org.red5.server.BaseConnection;
+import org.red5.server.clients.BaseConnection;
 import org.red5.server.api.IConnection;
 import org.red5.server.api.IContext;
 import org.red5.server.api.Red5;

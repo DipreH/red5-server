@@ -16,6 +16,8 @@ import org.red5.server.api.scope.IBasicScope;
 import org.red5.server.api.scope.IScope;
 import org.red5.server.api.scope.IScopeHandler;
 import org.red5.server.api.service.IServiceCall;
+import org.red5.server.clients.Client;
+import org.red5.server.clients.ClientRegistry;
 import org.red5.server.jmx.mxbeans.CoreHandlerMXBean;
 import org.red5.server.net.rtmp.RTMPConnection;
 import org.red5.server.net.rtmpt.RTMPTConnection;

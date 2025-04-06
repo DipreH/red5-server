@@ -19,7 +19,7 @@
         </property>
     </bean>    
     <!-- Global stuff from red5-default.xml -->
-    <bean id="global.clientRegistry" class="org.red5.server.ClientRegistry" />
+    <bean id="global.clientRegistry" class="org.red5.server.clients.ClientRegistry" />
     <bean id="global.serviceInvoker" class="org.red5.server.service.ServiceInvoker" >
         <property name="serviceResolvers" >
             <list>

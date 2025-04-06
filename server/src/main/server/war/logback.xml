@@ -11,22 +11,27 @@
         <filter class="ch.qos.logback.classic.filter.LevelFilter" >
 
             <level>
-INFO
+INFO
+
             </level>
 
             <onMatch>
-ACCEPT
+ACCEPT
+
             </onMatch>
 
             <onMismatch>
-DENY
+DENY
+
             </onMismatch>
         </filter>
 
         <layout class="ch.qos.logback.classic.PatternLayout" >
 
             <Pattern>
-			%date [%thread] %-5level %logger - %msg%n
+			%date [%thread] %-5level %logger - %msg%n
+
+
             </Pattern>
         </layout>
     </appender>
@@ -36,29 +41,36 @@ DENY
         class="ch.qos.logback.core.FileAppender" >
 
         <File>
-../logs/red5.log
+../logs/red5.log
+
         </File>
 
         <Append>
-false
+false
+
         </Append>
 
         <Encoding>
-UTF-8
+UTF-8
+
         </Encoding>
 
         <BufferedIO>
-false
+false
+
         </BufferedIO>
 
         <ImmediateFlush>
-true
+true
+
         </ImmediateFlush>
 
         <layout class="ch.qos.logback.classic.PatternLayout" >
 
             <Pattern>
-				%date [%thread] %-5level %logger{35} - %msg%n
+				%date [%thread] %-5level %logger{35} - %msg%n
+
+
             </Pattern>
         </layout>
     </appender>
@@ -68,36 +80,44 @@ true
         class="ch.qos.logback.core.FileAppender" >
 
         <File>
-../logs/error.log
+../logs/error.log
+
         </File>
 
         <Append>
-false
+false
+
         </Append>
 
         <Encoding>
-UTF-8
+UTF-8
+
         </Encoding>
 
         <BufferedIO>
-false
+false
+
         </BufferedIO>
 
         <ImmediateFlush>
-true
+true
+
         </ImmediateFlush>
 
         <filter class="ch.qos.logback.classic.filter.ThresholdFilter" >
 
             <level>
-WARN
+WARN
+
             </level>
         </filter>
 
         <layout class="ch.qos.logback.classic.PatternLayout" >
 
             <Pattern>
-				%date [%thread] %-5level %logger{35} - %msg%n
+				%date [%thread] %-5level %logger{35} - %msg%n
+
+
             </Pattern>
         </layout>
     </appender>
@@ -124,7 +144,7 @@ WARN
         <level value="WARN" />
     </logger>
 
-    <logger name="org.red5.server.Client" >
+    <logger name="org.red5.server.clients.Client" >
 
         <level value="INFO" />
     </logger>

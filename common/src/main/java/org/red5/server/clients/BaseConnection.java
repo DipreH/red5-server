@@ -5,7 +5,7 @@
  * either express or implied. See the License for the specific language governing permissions and limitations under the License.
  */
 
-package org.red5.server;
+package org.red5.server.clients;
 
 import java.beans.ConstructorProperties;
 import java.beans.PropertyChangeEvent;
@@ -19,6 +19,7 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.lang3.RandomStringUtils;
+import org.red5.server.util.AttributeStore;
 import org.red5.server.api.IClient;
 import org.red5.server.api.IConnection;
 import org.red5.server.api.event.IEvent;

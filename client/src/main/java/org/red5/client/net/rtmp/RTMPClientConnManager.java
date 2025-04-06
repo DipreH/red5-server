@@ -15,7 +15,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.red5.client.net.rtmpt.RTMPTClientConnection;
-import org.red5.server.BaseConnection;
+import org.red5.server.clients.BaseConnection;
 import org.red5.server.api.Red5;
 import org.red5.server.net.IConnectionManager;
 import org.red5.server.net.rtmp.RTMPConnection;

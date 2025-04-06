@@ -34,7 +34,7 @@ import javax.websocket.Session;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.tomcat.websocket.Constants;
 import org.apache.tomcat.websocket.WsSession;
-import org.red5.server.AttributeStore;
+import org.red5.server.util.AttributeStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

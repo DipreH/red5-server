@@ -15,7 +15,7 @@ import org.apache.mina.core.service.IoHandlerAdapter;
 import org.apache.mina.core.session.IoSession;
 import org.red5.client.net.rtmpe.RTMPEClient;
 import org.red5.client.net.rtmpe.RTMPEIoFilter;
-import org.red5.server.BaseConnection;
+import org.red5.server.clients.BaseConnection;
 import org.red5.server.api.Red5;
 import org.red5.server.net.IConnectionManager;
 import org.red5.server.net.rtmp.RTMPConnection;

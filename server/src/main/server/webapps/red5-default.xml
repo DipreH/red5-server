@@ -7,7 +7,7 @@
 
     <!-- DEFAULT GLOBAL CONTEXT -->
 
-    <bean id="global.clientRegistry" class="org.red5.server.ClientRegistry" />
+    <bean id="global.clientRegistry" class="org.red5.server.clients.ClientRegistry" />
 
     <bean id="global.serviceInvoker" class="org.red5.server.service.ServiceInvoker">
         <property name="serviceResolvers">

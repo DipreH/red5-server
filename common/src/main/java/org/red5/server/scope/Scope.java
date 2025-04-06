@@ -29,7 +29,7 @@ import javax.management.StandardMBean;
 import javax.management.openmbean.CompositeData;
 
 import org.apache.commons.lang3.StringUtils;
-import org.red5.server.AttributeStore;
+import org.red5.server.util.AttributeStore;
 import org.red5.server.Server;
 import org.red5.server.api.IClient;
 import org.red5.server.api.IConnection;

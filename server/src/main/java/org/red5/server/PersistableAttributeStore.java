@@ -18,6 +18,7 @@ import org.red5.io.object.Serializer;
 import org.red5.server.api.IAttributeStore;
 import org.red5.server.api.persistence.IPersistable;
 import org.red5.server.api.persistence.IPersistenceStore;
+import org.red5.server.util.AttributeStore;
 
 /**
  * Persistable attributes store. Server-side SharedObjects feature based on this class.

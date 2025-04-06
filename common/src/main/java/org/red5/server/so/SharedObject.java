@@ -27,7 +27,7 @@ import org.red5.io.object.Deserializer;
 import org.red5.io.object.Input;
 import org.red5.io.object.Output;
 import org.red5.io.object.Serializer;
-import org.red5.server.AttributeStore;
+import org.red5.server.util.AttributeStore;
 import org.red5.server.api.IAttributeStore;
 import org.red5.server.api.Red5;
 import org.red5.server.api.event.IEventListener;

@@ -7,7 +7,7 @@
 
     <bean
         id="global.clientRegistry"
-        class="org.red5.server.ClientRegistry" />
+        class="org.red5.server.clients.ClientRegistry" />
 
     <bean
         id="global.serviceInvoker"

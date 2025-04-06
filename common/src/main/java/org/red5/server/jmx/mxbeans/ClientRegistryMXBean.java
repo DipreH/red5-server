@@ -11,7 +11,7 @@ import java.util.List;
 
 import javax.management.MXBean;
 
-import org.red5.server.Client;
+import org.red5.server.clients.Client;
 import org.red5.server.exception.ClientNotFoundException;
 
 /**

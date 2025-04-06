@@ -19,7 +19,7 @@ import javax.servlet.ServletContextEvent;
 
 import org.red5.io.amf.Output;
 import org.red5.logging.Red5LoggerFactory;
-import org.red5.server.ClientRegistry;
+import org.red5.server.clients.ClientRegistry;
 import org.red5.server.Context;
 import org.red5.server.MappingStrategy;
 import org.red5.server.Server;
