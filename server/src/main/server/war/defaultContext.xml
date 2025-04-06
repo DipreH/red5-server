@@ -85,7 +85,8 @@
         <property name="persistenceClass" >
 
             <value>
-org.red5.server.persistence.FilePersistence
+                org.red5.server.FilePersistence
+
             </value>
         </property>
     </bean>

@@ -23,7 +23,7 @@ import org.junit.runners.MethodSorters;
 import org.red5.server.api.scope.IBasicScope;
 import org.red5.server.api.scope.IScope;
 import org.red5.server.api.scope.ScopeType;
-import org.red5.server.persistence.RamPersistence;
+import org.red5.server.RamPersistence;
 import org.red5.server.so.SharedObjectScope;
 import org.red5.server.stream.ClientBroadcastStream;
 import org.slf4j.Logger;

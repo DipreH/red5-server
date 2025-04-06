@@ -55,7 +55,7 @@
     <bean id="sharedObjectService" class="org.red5.server.so.SharedObjectService">
         <property name="maximumEventsPerUpdate" value="${so.max.events.per.update}"/>
         <property name="persistenceClassName">
-            <value>org.red5.server.persistence.FilePersistence</value>
+            <value>org.red5.server.FilePersistence</value>
         </property>
         <property name="scheduler">
             <bean class="org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler">

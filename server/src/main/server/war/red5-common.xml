@@ -124,7 +124,7 @@
 
     <bean id="sharedObjectService" class="org.red5.server.so.SharedObjectService">
         <property name="persistenceClassName">
-            <value>org.red5.server.persistence.FilePersistence</value>
+            <value>org.red5.server.FilePersistence</value>
         </property>
     </bean>
     <!-- High level access to streams -->

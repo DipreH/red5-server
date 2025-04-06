@@ -16,7 +16,7 @@ import org.red5.server.api.scope.IScope;
 import org.red5.server.api.scope.ScopeType;
 import org.red5.server.api.so.ISharedObject;
 import org.red5.server.api.so.ISharedObjectService;
-import org.red5.server.persistence.RamPersistence;
+import org.red5.server.RamPersistence;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
@@ -46,7 +46,7 @@ public class SharedObjectService implements ISharedObjectService {
     /**
      * Persistence class name
      */
-    private String persistenceClassName = "org.red5.server.persistence.RamPersistence";
+    private String persistenceClassName = "org.red5.server.RamPersistence";
 
     /**
      * Pushes a task to the scheduler for single execution.
