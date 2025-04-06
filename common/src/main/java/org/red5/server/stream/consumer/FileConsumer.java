@@ -50,9 +50,7 @@ import org.springframework.beans.factory.DisposableBean;
  * @author The Red5 Project
  * @author Paul Gregoire (mondain@gmail.com)
  */
-public class FileConsumer implements Constants, IPushableConsumer, IPipeConnectionListener, DisposableBean, IFileConsumer {
-
-    private static final Logger log = LoggerFactory.getLogger(FileConsumer.class);
+public class FileConsumer extends AbstractFileConsumer implements Constants, IPushableConsumer, DisposableBean, IFileConsumer {
 
     private AtomicBoolean initialized = new AtomicBoolean(false);
 
@@ -69,24 +67,9 @@ public class FileConsumer implements Constants, IPushableConsumer, IPipeConnecti
     private BlockingQueue<QueuedMediaData> queue;
 
     /**
-     * Scope
-     */
-    private IScope scope;
-
-    /**
-     * Path
-     */
-    private Path path;
-
-    /**
      * Tag writer
      */
     private ITagWriter writer;
-
-    /**
-     * Operation mode
-     */
-    private String mode = "none";
 
     /**
      * Start timestamp
@@ -112,16 +95,6 @@ public class FileConsumer implements Constants, IPushableConsumer, IPipeConnecti
     private volatile boolean gotKeyFrame = false;
 
     /**
-     * Threshold / size for the queue.
-     */
-    private int queueThreshold = 240;
-
-    /**
-     * Whether or not to wait until a video keyframe arrives before writing video.
-     */
-    private boolean waitForVideoKeyframe = true;
-
-    /**
      * Whether or not to use a comparator with a priority queue.
      */
     private boolean usePriority = true;
@@ -135,6 +108,8 @@ public class FileConsumer implements Constants, IPushableConsumer, IPipeConnecti
      * Default ctor
      */
     public FileConsumer() {
+        super();
+        this.queueThreshold = 240;
     }
 
     /**
@@ -146,9 +121,8 @@ public class FileConsumer implements Constants, IPushableConsumer, IPipeConnecti
      *            File
      */
     public FileConsumer(IScope scope, File file) {
-        this();
-        this.scope = scope;
-        this.path = file.toPath();
+        super(scope,file);
+        this.queueThreshold = 240;
     }
 
     /**
@@ -162,10 +136,8 @@ public class FileConsumer implements Constants, IPushableConsumer, IPipeConnecti
      *            The recording mode
      */
     public FileConsumer(IScope scope, String fileName, String mode) {
-        this();
-        this.scope = scope;
-        this.mode = mode;
-        setupOutputPath(fileName);
+        super(scope,fileName,mode);
+        this.queueThreshold = 240;
     }
 
     /**
@@ -334,26 +306,6 @@ public class FileConsumer implements Constants, IPushableConsumer, IPipeConnecti
     }
 
     /**
-     * Pipe connection event handler
-     *
-     * @param event
-     *            Pipe connection event
-     */
-    @SuppressWarnings("incomplete-switch")
-    public void onPipeConnectionEvent(PipeConnectionEvent event) {
-        switch (event.getType()) {
-            case CONSUMER_CONNECT_PUSH:
-                if (event.getConsumer() == this) {
-                    Map<String, Object> paramMap = event.getParamMap();
-                    if (paramMap != null) {
-                        mode = (String) paramMap.get("mode");
-                    }
-                }
-                break;
-        }
-    }
-
-    /**
      * Initialization
      *
      * @throws IOException
@@ -472,92 +424,6 @@ public class FileConsumer implements Constants, IPushableConsumer, IPipeConnecti
     }
 
     /**
-     * Sets up the output file path for writing.
-     *
-     * @param name
-     *            output filename to use
-     */
-    public void setupOutputPath(String name) {
-        // get stream filename generator
-        IStreamFilenameGenerator generator = (IStreamFilenameGenerator) ScopeUtils.getScopeService(scope, IStreamFilenameGenerator.class, DefaultStreamFilenameGenerator.class);
-        // generate file path
-        String filePath = generator.generateFilename(scope, name, ".flv", GenerationType.RECORD);
-        this.path = generator.resolvesToAbsolutePath() ? Paths.get(filePath) : Paths.get(System.getProperty("red5.root"), "webapps", scope.getContextPath(), filePath);
-        // if append was requested, ensure the file we want to append exists (append==record)
-        File appendee = getFile();
-        if (IClientStream.MODE_APPEND.equals(mode) && !appendee.exists()) {
-            try {
-                if (appendee.createNewFile()) {
-                    log.debug("New file created for appending");
-                } else {
-                    log.debug("Failure to create new file for appending");
-                }
-            } catch (IOException e) {
-                log.warn("Exception creating replacement file for append", e);
-            }
-        }
-    }
-
-    /**
-     * Sets the scope for this consumer.
-     *
-     * @param scope
-     *            scope
-     */
-    public void setScope(IScope scope) {
-        this.scope = scope;
-    }
-
-    /**
-     * Sets the file we're writing to.
-     *
-     * @param file
-     *            file
-     */
-    public void setFile(File file) {
-        path = file.toPath();
-    }
-
-    /**
-     * Returns the file.
-     *
-     * @return file
-     */
-    public File getFile() {
-        return path.toFile();
-    }
-
-    /**
-     * Sets the threshold for the queue. When the threshold is met a worker is spawned to empty the sorted queue to the writer.
-     *
-     * @param queueThreshold
-     *            number of items to queue before spawning worker
-     */
-    public void setQueueThreshold(int queueThreshold) {
-        this.queueThreshold = queueThreshold;
-    }
-
-    /**
-     * Sets whether or not to use the queue.
-     *
-     * @param delayWrite
-     *            true to use the queue, false if not
-     */
-    @Deprecated
-    public void setDelayWrite(boolean delayWrite) {
-    }
-
-    /**
-     * Whether or not to wait for the first keyframe before processing video frames.
-     *
-     * @param waitForVideoKeyframe wait for key frame or not
-     */
-    public void setWaitForVideoKeyframe(boolean waitForVideoKeyframe) {
-        log.debug("setWaitForVideoKeyframe: {}", waitForVideoKeyframe);
-        this.waitForVideoKeyframe = waitForVideoKeyframe;
-    }
-
-    /**
      * Whether or not to use a PriorityBlockingQueue or LinkedBlockingQueue for data queue.
      *
      * @param usePriority priority queue or blocking queue
@@ -573,16 +439,6 @@ public class FileConsumer implements Constants, IPushableConsumer, IPipeConnecti
      */
     public void setOfferTimeout(long offerTimeout) {
         this.offerTimeout = offerTimeout;
-    }
-
-    /**
-     * Sets the recording mode.
-     *
-     * @param mode
-     *            either "record" or "append" depending on the type of action to perform
-     */
-    public void setMode(String mode) {
-        this.mode = mode;
     }
 
     public void setAudioDecoderConfiguration(IRTMPEvent audioConfig) {
